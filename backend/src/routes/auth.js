@@ -2,7 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { query, sql } = require('../config/db');
+const { query } = require('../config/db');
 const { success, fail } = require('../utils/response');
 
 const router = express.Router();
@@ -15,39 +15,6 @@ function validate(req, res) {
   }
   return true;
 }
-
-router.post(
-  '/register',
-  [
-    body('username').trim().isLength({ min: 3, max: 50 }).withMessage('用户名 3-50 字符'),
-    body('email').isEmail().withMessage('邮箱格式不正确'),
-    body('password').isLength({ min: 6 }).withMessage('密码至少 6 位'),
-    body('real_name').trim().notEmpty().withMessage('姓名不能为空'),
-    body('student_no').optional().trim(),
-  ],
-  async (req, res, next) => {
-    try {
-      if (!validate(req, res)) return;
-      const { username, email, password, real_name, student_no } = req.body;
-      const exists = await query(
-        'SELECT user_id FROM Users WHERE username = @username OR email = @email',
-        { username, email }
-      );
-      if (exists.recordset.length) {
-        return fail(res, '用户名或邮箱已存在');
-      }
-      const password_hash = await bcrypt.hash(password, 10);
-      await query(
-        `INSERT INTO Users (username, email, password_hash, role, status, real_name, student_no)
-         VALUES (@username, @email, @password_hash, 'member', 'pending', @real_name, @student_no)`,
-        { username, email, password_hash, real_name, student_no: student_no || null }
-      );
-      return success(res, null, '注册成功，请等待管理员审核');
-    } catch (err) {
-      next(err);
-    }
-  }
-);
 
 router.post(
   '/login',
@@ -78,62 +45,48 @@ router.post(
       delete user.password_hash;
       return success(res, { token, user }, '登录成功');
     } catch (err) {
-      next(err);
-    }
-  }
-);
-
-router.post(
-  '/reset-password/request',
-  [body('email').isEmail().withMessage('邮箱格式不正确')],
-  async (req, res, next) => {
-    try {
-      if (!validate(req, res)) return;
-      const { email } = req.body;
-      const result = await query('SELECT user_id FROM Users WHERE email = @email', { email });
-      if (!result.recordset.length) {
-        return fail(res, '该邮箱未注册');
+      if (err.code === 'ESOCKET' || err.code === 'ECONNRESET' || err.message?.includes('Connection')) {
+        return fail(res, '数据库连接失败，请检查 SQL Server 是否运行及 backend/.env 配置', 503, 503);
       }
-      const code = String(Math.floor(100000 + Math.random() * 900000));
-      const expires = new Date(Date.now() + 5 * 60 * 1000);
-      await query(
-        `INSERT INTO PasswordResetCodes (email, code, expires_at) VALUES (@email, @code, @expires)`,
-        { email, code, expires }
-      );
-      console.log(`[重置密码] 邮箱 ${email} 验证码: ${code}`);
-      return success(res, { code, message: '实验环境：验证码已在响应中返回（生产环境应发送邮件）' }, '验证码已生成');
-    } catch (err) {
       next(err);
     }
   }
 );
 
 router.post(
-  '/reset-password/confirm',
+  '/password-reset-request',
   [
-    body('email').isEmail().withMessage('邮箱格式不正确'),
-    body('code').trim().notEmpty().withMessage('请输入验证码'),
+    body('account').trim().notEmpty().withMessage('请输入账号'),
     body('new_password').isLength({ min: 6 }).withMessage('新密码至少 6 位'),
+    body('confirm_password').custom((v, { req }) => {
+      if (v !== req.body.new_password) throw new Error('两次密码不一致');
+      return true;
+    }),
   ],
   async (req, res, next) => {
     try {
       if (!validate(req, res)) return;
-      const { email, code, new_password } = req.body;
-      const result = await query(
-        `SELECT TOP 1 id, code, expires_at, used FROM PasswordResetCodes
-         WHERE email = @email AND used = 0 ORDER BY created_at DESC`,
-        { email }
+      const { account, new_password } = req.body;
+      const userResult = await query(
+        `SELECT user_id, status FROM Users WHERE username = @account OR email = @account`,
+        { account }
       );
-      const row = result.recordset[0];
-      if (!row || row.code !== code) return fail(res, '验证码无效');
-      if (new Date(row.expires_at) < new Date()) return fail(res, '验证码已过期');
+      const user = userResult.recordset[0];
+      if (!user) return fail(res, '账号不存在');
+      if (user.status !== 'active') return fail(res, '账号状态异常，请联系管理员');
+
+      const pending = await query(
+        `SELECT request_id FROM PasswordResetRequests WHERE user_id = @userId AND status = 'pending'`,
+        { userId: user.user_id }
+      );
+      if (pending.recordset.length) return fail(res, '您已有待审核的密码找回申请，请耐心等待');
+
       const password_hash = await bcrypt.hash(new_password, 10);
-      await query('UPDATE Users SET password_hash = @password_hash, updated_at = GETDATE() WHERE email = @email', {
-        password_hash,
-        email,
-      });
-      await query('UPDATE PasswordResetCodes SET used = 1 WHERE id = @id', { id: row.id });
-      return success(res, null, '密码重置成功');
+      await query(
+        `INSERT INTO PasswordResetRequests (user_id, new_password_hash, status) VALUES (@userId, @password_hash, 'pending')`,
+        { userId: user.user_id, password_hash }
+      );
+      return success(res, null, '密码找回申请已提交，请等待管理员审核');
     } catch (err) {
       next(err);
     }

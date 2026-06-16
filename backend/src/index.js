@@ -37,6 +37,15 @@ app.use('/api/v1/courses', courseRoutes);
 
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`SDO OA API running on http://localhost:${PORT}`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n端口 ${PORT} 已被占用。请先关闭旧的后端进程，或在 PowerShell 中执行：`);
+    console.error(`  Get-NetTCPConnection -LocalPort ${PORT} | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }\n`);
+    process.exit(1);
+  }
+  throw err;
 });

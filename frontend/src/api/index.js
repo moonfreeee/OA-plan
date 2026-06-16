@@ -1,11 +1,7 @@
 import request from './request'
 
 export const login = (data) => request.post('/auth/login', data)
-export const register = (data) => request.post('/auth/register', data)
-export const sendEmailCode = (data) => request.post('/auth/email-code', data)
-export const verifyResetCode = (data) => request.post('/auth/reset-password/verify', data)
-export const requestResetCode = (data) => request.post('/auth/reset-password/request', data)
-export const confirmResetPassword = (data) => request.post('/auth/reset-password/confirm', data)
+export const requestPasswordReset = (data) => request.post('/auth/password-reset-request', data)
 
 export const getMe = () => request.get('/users/me')
 export const updateMe = (data) => request.put('/users/me', data)
@@ -15,6 +11,7 @@ export const getMySummary = () => request.get('/users/me/summary')
 export const getDashboard = () => request.get('/dashboard/summary')
 export const getClockInStatus = () => request.get('/dashboard/clock-in')
 export const clockIn = () => request.post('/dashboard/clock-in')
+export const getTodayClockIns = () => request.get('/dashboard/clock-in/today')
 
 export const getAnnouncements = () => request.get('/announcements')
 export const createAnnouncement = (data) => request.post('/announcements', data)
@@ -55,4 +52,8 @@ export const deleteChapter = (courseId, chapterId) => request.delete(`/courses/$
 export const completeChapter = (chapterId) => request.post(`/courses/chapters/${chapterId}/complete`)
 
 export const getAdminUsers = (params) => request.get('/users/admin/users', { params })
-export const approveUser = (id, action) => request.put(`/users/admin/users/${id}/approve`, { action })
+export const createAdminUser = (data) => request.post('/users/admin/users', data)
+export const updateAdminUser = (id, data) => request.put(`/users/admin/users/${id}`, data)
+export const deleteAdminUser = (id) => request.delete(`/users/admin/users/${id}`)
+export const getPasswordResetRequests = (params) => request.get('/users/admin/password-reset-requests', { params })
+export const reviewPasswordResetRequest = (id, data) => request.put(`/users/admin/password-reset-requests/${id}`, data)

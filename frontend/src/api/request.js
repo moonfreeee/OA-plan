@@ -31,7 +31,14 @@ if (!USE_MOCK) {
       return res
     },
     (error) => {
-      const msg = error.response?.data?.message || error.message || '网络错误'
+      let msg = error.response?.data?.message || error.message || '网络错误'
+      if (
+        !error.response ||
+        error.code === 'ERR_NETWORK' ||
+        (error.response?.status === 500 && !error.response?.data?.message)
+      ) {
+        msg = '无法连接后端服务，请先在 backend 目录运行 npm run dev，并确认 SQL Server 已启动'
+      }
       if (error.response?.status === 401) {
         localStorage.removeItem('token')
         localStorage.removeItem('user')

@@ -17,6 +17,12 @@ const filter = reactive({ year: 2025, month: 6, day: null })
 const statusMap = { draft: '草稿', active: '进行中', closed: '已结束' }
 const statusType = { draft: 'info', active: 'primary', closed: 'success' }
 
+function formatDate(value) {
+  if (!value) return ''
+  const s = String(value)
+  return s.includes('T') ? s.slice(0, 10) : s
+}
+
 onMounted(() => query())
 
 async function query() {
@@ -64,9 +70,9 @@ async function query() {
           </div>
           <div class="period-row">
             <span class="label">开始日期</span>
-            <span>{{ period.start_date }}</span>
+            <span>{{ formatDate(period.start_date) }}</span>
             <span class="label" style="margin-left: 32px">结束日期</span>
-            <span>{{ period.end_date }}</span>
+            <span>{{ formatDate(period.end_date) }}</span>
           </div>
           <div class="period-row">
             <span class="label">状态</span>

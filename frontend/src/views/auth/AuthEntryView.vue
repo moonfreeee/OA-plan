@@ -1,16 +1,14 @@
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Promotion } from '@element-plus/icons-vue'
+import { User, Key } from '@element-plus/icons-vue'
 import AuthShell from '@/components/auth/AuthShell.vue'
-import { login, register, sendEmailCode } from '@/api'
+import { login, requestPasswordReset } from '@/api'
 import { useUserStore } from '@/stores/user'
 import { USE_MOCK } from '@/api/request'
-import { MOCK_VERIFY_CODE } from '@/constants/auth'
 
 const REMEMBER_KEY = 'sdo_remember_account'
-const PREFILL_KEY = 'sdo_login_prefill'
 
 const route = useRoute()
 const router = useRouter()
@@ -18,61 +16,30 @@ const userStore = useUserStore()
 
 const activeTab = ref('login')
 const loginLoading = ref(false)
-const registerLoading = ref(false)
-const registerSuccess = ref(false)
+const resetLoading = ref(false)
+const resetSuccess = ref(false)
 const showPassword = ref(false)
+const showResetPassword = ref(false)
 
 const loginForm = reactive({ account: '', password: '', remember: false })
-const registerForm = reactive({
-  username: '',
-  password: '',
-  confirm: '',
-  emailPrefix: '',
-  emailSuffix: '@gmail.com',
-  code: '',
-  real_name: '',
-  student_no: ''
-})
-
-const codeCountdown = ref(0)
-let codeTimer = null
-
-const emailDomains = ['@gmail.com', '@qq.com', '@163.com', '@outlook.com', '@sdo.local']
-
-const fullEmail = computed(() =>
-  registerForm.emailPrefix ? `${registerForm.emailPrefix}${registerForm.emailSuffix}` : ''
-)
+const resetForm = reactive({ account: '', new_password: '', confirm_password: '' })
 
 onMounted(() => {
-  if (route.query.tab === 'register') activeTab.value = 'register'
+  if (route.query.tab === 'reset') activeTab.value = 'reset'
   const remembered = localStorage.getItem(REMEMBER_KEY)
   if (remembered) {
     loginForm.account = remembered
     loginForm.remember = true
   }
-  const prefill = sessionStorage.getItem(PREFILL_KEY)
-  if (prefill) {
-    try {
-      const { account, password } = JSON.parse(prefill)
-      loginForm.account = account
-      loginForm.password = password
-      activeTab.value = 'login'
-      sessionStorage.removeItem(PREFILL_KEY)
-    } catch { /* ignore */ }
-  }
-})
-
-onUnmounted(() => {
-  if (codeTimer) clearInterval(codeTimer)
 })
 
 watch(activeTab, (tab) => {
-  router.replace({ path: '/login', query: tab === 'register' ? { tab: 'register' } : {} })
+  router.replace({ path: '/login', query: tab === 'reset' ? { tab: 'reset' } : {} })
 })
 
 function switchTab(tab) {
   activeTab.value = tab
-  registerSuccess.value = false
+  resetSuccess.value = false
 }
 
 async function handleLogin() {
@@ -96,65 +63,25 @@ async function handleLogin() {
   }
 }
 
-function startCountdown() {
-  codeCountdown.value = 60
-  if (codeTimer) clearInterval(codeTimer)
-  codeTimer = setInterval(() => {
-    codeCountdown.value -= 1
-    if (codeCountdown.value <= 0) clearInterval(codeTimer)
-  }, 1000)
-}
-
-async function sendRegisterCode() {
-  if (!registerForm.emailPrefix) {
-    ElMessage.warning('请先填写邮箱')
-    return
+async function handleResetRequest() {
+  if (!resetForm.account) return ElMessage.warning('请输入账号')
+  if (!resetForm.new_password || resetForm.new_password.length < 6) {
+    return ElMessage.warning('新密码至少 6 位')
   }
-  await sendEmailCode({ email: fullEmail.value, type: 'register' })
-  ElMessage.success('验证码已发送')
-  startCountdown()
-}
-
-async function handleRegister() {
-  if (!registerForm.username || !registerForm.password) {
-    ElMessage.warning('请填写用户名和密码')
-    return
+  if (resetForm.new_password !== resetForm.confirm_password) {
+    return ElMessage.warning('两次密码不一致')
   }
-  if (registerForm.password !== registerForm.confirm) {
-    ElMessage.warning('两次密码不一致')
-    return
-  }
-  if (!registerForm.emailPrefix) {
-    ElMessage.warning('请填写绑定邮箱')
-    return
-  }
-  if (!registerForm.code) {
-    ElMessage.warning('请输入验证码')
-    return
-  }
-  registerLoading.value = true
+  resetLoading.value = true
   try {
-    await register({
-      username: registerForm.username,
-      email: fullEmail.value,
-      password: registerForm.password,
-      real_name: registerForm.real_name || registerForm.username,
-      student_no: registerForm.student_no,
-      code: registerForm.code
+    await requestPasswordReset({
+      account: resetForm.account,
+      new_password: resetForm.new_password,
+      confirm_password: resetForm.confirm_password
     })
-    registerSuccess.value = true
-    setTimeout(() => {
-      sessionStorage.setItem(
-        PREFILL_KEY,
-        JSON.stringify({ account: registerForm.username, password: registerForm.password })
-      )
-      registerSuccess.value = false
-      activeTab.value = 'login'
-      registerForm.username = registerForm.password = registerForm.confirm = ''
-      registerForm.emailPrefix = registerForm.code = ''
-    }, 2000)
+    resetSuccess.value = true
+    resetForm.account = resetForm.new_password = resetForm.confirm_password = ''
   } finally {
-    registerLoading.value = false
+    resetLoading.value = false
   }
 }
 </script>
@@ -163,7 +90,7 @@ async function handleRegister() {
   <AuthShell>
     <div class="auth-card">
       <nav class="auth-card__nav">
-        <div class="auth-card__nav-slider" :class="{ 'is-register': activeTab === 'register' }" />
+        <div class="auth-card__nav-slider" :class="{ 'is-reset': activeTab === 'reset' }" />
         <div
           class="auth-card__nav-item"
           :class="{ 'is-active': activeTab === 'login' }"
@@ -177,17 +104,19 @@ async function handleRegister() {
         </div>
         <div
           class="auth-card__nav-item"
-          :class="{ 'is-active': activeTab === 'register' }"
-          @click="switchTab('register')"
+          :class="{ 'is-active': activeTab === 'reset' }"
+          @click="switchTab('reset')"
         >
-          <div class="auth-card__nav-item-title">新注册</div>
-          <el-icon class="auth-card__nav-icon"><Promotion /></el-icon>
+          <div>
+            <div class="auth-card__nav-item-title">密码找回</div>
+            <div class="auth-card__nav-item-sub">提交管理员审核</div>
+          </div>
+          <el-icon class="auth-card__nav-icon"><Key /></el-icon>
         </div>
       </nav>
 
       <div class="auth-card__body">
         <div class="auth-panel-wrap">
-          <!-- 登录 -->
           <div class="auth-panel" :class="activeTab === 'login' ? 'is-visible' : 'is-hidden'">
             <h1 class="auth-title">用户登录</h1>
             <form @submit.prevent="handleLogin">
@@ -216,7 +145,6 @@ async function handleRegister() {
                   <input v-model="loginForm.remember" type="checkbox" />
                   <span>记住密码</span>
                 </label>
-                <router-link to="/forgot-password" class="auth-link">忘记密码</router-link>
               </div>
               <button type="submit" class="auth-btn-primary" :disabled="loginLoading">
                 {{ loginLoading ? '登录中…' : '登录' }}
@@ -227,62 +155,47 @@ async function handleRegister() {
             </div>
           </div>
 
-          <!-- 注册 -->
-          <div class="auth-panel" :class="activeTab === 'register' ? 'is-visible' : 'is-hidden'">
-            <template v-if="registerSuccess">
+          <div class="auth-panel" :class="activeTab === 'reset' ? 'is-visible' : 'is-hidden'">
+            <template v-if="resetSuccess">
               <div class="auth-success">
                 <div class="auth-success__icon">✓</div>
-                <div class="auth-success__text">注册成功</div>
-                <p class="auth-muted" style="margin-top: 12px">即将跳转至登录页…</p>
+                <div class="auth-success__text">申请已提交</div>
+                <p class="auth-muted" style="margin-top: 12px">请等待管理员审核，通过后可使用新密码登录</p>
+                <button type="button" class="auth-btn-primary" style="margin-top: 20px" @click="switchTab('login')">
+                  返回登录
+                </button>
               </div>
             </template>
             <template v-else>
-              <h1 class="auth-title">注册</h1>
-              <p class="auth-subtitle">欢迎来到软开基地</p>
-              <form @submit.prevent="handleRegister">
+              <h1 class="auth-title">密码找回</h1>
+              <p class="auth-subtitle">提交申请后由管理员审核通过即可生效</p>
+              <form @submit.prevent="handleResetRequest">
                 <div class="auth-field">
-                  <input v-model="registerForm.username" class="auth-input" placeholder="请输入用户名" />
+                  <input v-model="resetForm.account" class="auth-input" placeholder="请输入登录账号" />
                 </div>
-                <div class="auth-field">
+                <div class="auth-field auth-field--password">
                   <input
-                    v-model="registerForm.password"
+                    v-model="resetForm.new_password"
                     class="auth-input"
-                    type="password"
-                    placeholder="请输入密码"
+                    :type="showResetPassword ? 'text' : 'password'"
+                    placeholder="请输入新密码"
                   />
-                </div>
-                <div class="auth-field">
-                  <input
-                    v-model="registerForm.confirm"
-                    class="auth-input"
-                    type="password"
-                    placeholder="请再次输入密码"
-                  />
-                </div>
-                <div class="auth-field auth-input-row">
-                  <input v-model="registerForm.emailPrefix" class="auth-input" placeholder="请输入绑定邮箱" />
-                  <select v-model="registerForm.emailSuffix" class="auth-email-suffix">
-                    <option v-for="d in emailDomains" :key="d" :value="d">{{ d }}</option>
-                  </select>
-                </div>
-                <div class="auth-field auth-input-row">
-                  <input v-model="registerForm.code" class="auth-input" placeholder="请输入验证码" maxlength="6" />
-                  <button
-                    type="button"
-                    class="auth-code-btn"
-                    :disabled="codeCountdown > 0"
-                    @click="sendRegisterCode"
-                  >
-                    {{ codeCountdown > 0 ? `重新发送 ${codeCountdown}s` : '获取验证码' }}
+                  <button type="button" class="auth-eye" @click="showResetPassword = !showResetPassword">
+                    {{ showResetPassword ? '🙈' : '👁' }}
                   </button>
                 </div>
-                <button type="submit" class="auth-btn-primary" :disabled="registerLoading">
-                  {{ registerLoading ? '提交中…' : '注册' }}
+                <div class="auth-field">
+                  <input
+                    v-model="resetForm.confirm_password"
+                    class="auth-input"
+                    type="password"
+                    placeholder="请再次输入新密码"
+                  />
+                </div>
+                <button type="submit" class="auth-btn-primary" :disabled="resetLoading">
+                  {{ resetLoading ? '提交中…' : '提交申请' }}
                 </button>
               </form>
-              <div v-if="USE_MOCK" class="auth-mock-tip">
-                测试验证码：<strong>{{ MOCK_VERIFY_CODE }}</strong>（注册与找回密码通用）
-              </div>
             </template>
           </div>
         </div>

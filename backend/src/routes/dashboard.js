@@ -1,7 +1,7 @@
 const express = require('express');
 const { query } = require('../config/db');
-const { success } = require('../utils/response');
-const { requireAuth } = require('../middleware/auth');
+const { success, fail } = require('../utils/response');
+const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -64,6 +64,84 @@ router.get('/summary', requireAuth, async (req, res, next) => {
       announcements: recentAnnouncements.recordset,
       activities: activities.recordset,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/clock-in/today', requireAuth, requireRole('admin'), async (req, res, next) => {
+  try {
+    const result = await query(
+      `SELECT u.user_id, u.username, u.real_name, u.student_no, u.role,
+        c.clock_in_time,
+        CASE WHEN c.record_id IS NOT NULL THEN 1 ELSE 0 END AS clocked_in
+       FROM Users u
+       LEFT JOIN ClockInRecords c ON c.user_id = u.user_id AND c.clock_date = CAST(GETDATE() AS DATE)
+       WHERE u.status = 'active'
+       ORDER BY clocked_in DESC, c.clock_in_time ASC, u.real_name`
+    );
+    const list = result.recordset.map((row) => ({
+      user_id: row.user_id,
+      username: row.username,
+      real_name: row.real_name,
+      student_no: row.student_no,
+      role: row.role,
+      clocked_in: !!row.clocked_in,
+      clock_in_time: row.clock_in_time || null,
+    }));
+    const clockedCount = list.filter((r) => r.clocked_in).length;
+    return success(res, {
+      date: new Date().toISOString().slice(0, 10),
+      total: list.length,
+      clocked_count: clockedCount,
+      absent_count: list.length - clockedCount,
+      records: list,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/clock-in', requireAuth, async (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+    const result = await query(
+      `SELECT clock_in_time FROM ClockInRecords
+       WHERE user_id = @userId AND clock_date = CAST(GETDATE() AS DATE)`,
+      { userId }
+    );
+    const row = result.recordset[0];
+    return success(res, {
+      clockedIn: !!row,
+      clockInTime: row?.clock_in_time || null,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/clock-in', requireAuth, async (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+    const existing = await query(
+      `SELECT record_id FROM ClockInRecords
+       WHERE user_id = @userId AND clock_date = CAST(GETDATE() AS DATE)`,
+      { userId }
+    );
+    if (existing.recordset.length) {
+      return fail(res, '今日已打卡', 1, 400);
+    }
+    const result = await query(
+      `INSERT INTO ClockInRecords (user_id, clock_date, clock_in_time)
+       OUTPUT INSERTED.clock_in_time
+       VALUES (@userId, CAST(GETDATE() AS DATE), GETDATE())`,
+      { userId }
+    );
+    return success(
+      res,
+      { clockedIn: true, clockInTime: result.recordset[0].clock_in_time },
+      '打卡成功'
+    );
   } catch (err) {
     next(err);
   }

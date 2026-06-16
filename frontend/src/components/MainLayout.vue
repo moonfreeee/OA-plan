@@ -27,11 +27,13 @@ const navItems = [
 ]
 
 const adminItems = [
-  { path: '/admin/users', label: '用户审核' },
+  { path: '/admin/accounts', label: '账号管理' },
+  { path: '/admin/password-resets', label: '密码找回审核' },
   { path: '/admin/announcements', label: '公告管理' },
   { path: '/admin/teams', label: '团队管理' },
   { path: '/admin/assessments', label: '考核管理' },
-  { path: '/admin/courses', label: '课程管理' }
+  { path: '/admin/courses', label: '课程管理' },
+  { path: '/admin/clock-in', label: '打卡详情' }
 ]
 
 const activeMenu = computed(() => {

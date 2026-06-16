@@ -5,6 +5,7 @@ USE SDO_OA;
 GO
 
 IF OBJECT_ID('LearningProgress', 'U') IS NOT NULL DROP TABLE LearningProgress;
+IF OBJECT_ID('ClockInRecords', 'U') IS NOT NULL DROP TABLE ClockInRecords;
 IF OBJECT_ID('CourseChapters', 'U') IS NOT NULL DROP TABLE CourseChapters;
 IF OBJECT_ID('Courses', 'U') IS NOT NULL DROP TABLE Courses;
 IF OBJECT_ID('AssessmentScores', 'U') IS NOT NULL DROP TABLE AssessmentScores;
@@ -14,6 +15,7 @@ IF OBJECT_ID('TeamMembershipRequests', 'U') IS NOT NULL DROP TABLE TeamMembershi
 IF OBJECT_ID('TeamMembers', 'U') IS NOT NULL DROP TABLE TeamMembers;
 IF OBJECT_ID('Teams', 'U') IS NOT NULL DROP TABLE Teams;
 IF OBJECT_ID('Announcements', 'U') IS NOT NULL DROP TABLE Announcements;
+IF OBJECT_ID('PasswordResetRequests', 'U') IS NOT NULL DROP TABLE PasswordResetRequests;
 IF OBJECT_ID('PasswordResetCodes', 'U') IS NOT NULL DROP TABLE PasswordResetCodes;
 IF OBJECT_ID('Users', 'U') IS NOT NULL DROP TABLE Users;
 GO
@@ -41,6 +43,16 @@ CREATE TABLE PasswordResetCodes (
     expires_at DATETIME2 NOT NULL,
     used BIT NOT NULL DEFAULT 0,
     created_at DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+
+CREATE TABLE PasswordResetRequests (
+    request_id INT IDENTITY(1,1) PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES Users(user_id),
+    new_password_hash NVARCHAR(255) NOT NULL,
+    status NVARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    created_at DATETIME2 NOT NULL DEFAULT GETDATE(),
+    reviewed_at DATETIME2 NULL,
+    reviewer_id INT NULL REFERENCES Users(user_id)
 );
 
 CREATE TABLE Announcements (
@@ -148,10 +160,20 @@ CREATE TABLE LearningProgress (
     CONSTRAINT UQ_LearningProgress UNIQUE (user_id, chapter_id)
 );
 
+CREATE TABLE ClockInRecords (
+    record_id INT IDENTITY(1,1) PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES Users(user_id),
+    clock_date DATE NOT NULL,
+    clock_in_time DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT UQ_ClockIn_UserDate UNIQUE (user_id, clock_date)
+);
+
 CREATE INDEX IX_Users_Username ON Users(username);
 CREATE INDEX IX_Users_Email ON Users(email);
 CREATE INDEX IX_TeamMembers_TeamUser ON TeamMembers(team_id, user_id);
 CREATE INDEX IX_AssessmentScores_PeriodUser ON AssessmentScores(period_id, user_id);
 CREATE INDEX IX_LearningProgress_UserChapter ON LearningProgress(user_id, chapter_id);
 CREATE INDEX IX_PasswordResetCodes_Email ON PasswordResetCodes(email);
+CREATE INDEX IX_PasswordResetRequests_Status ON PasswordResetRequests(status, created_at DESC);
+CREATE INDEX IX_ClockInRecords_UserDate ON ClockInRecords(user_id, clock_date);
 GO

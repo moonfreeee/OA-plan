@@ -85,7 +85,7 @@
   z-index: 0;
 }
 
-.auth-card__nav-slider.is-register {
+.auth-card__nav-slider.is-reset {
   transform: translateY(88px);
 }
 

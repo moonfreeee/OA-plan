@@ -10,8 +10,12 @@ import {
   mockActivities,
   mockTeamJoinRequests,
   mockTeamLeaveRequests,
+  mockDynamicUsers,
+  mockPasswordResetRequests,
   getCurrentMockUserId,
-  allocTeamRequestId
+  allocTeamRequestId,
+  allocUserId,
+  allocResetRequestId
 } from './data'
 import { isClockedIn, setClockIn, getClockInTime } from './clockIn'
 import { ElMessage } from 'element-plus'
@@ -83,31 +87,41 @@ export async function handleMock(config) {
     const pwd = mockAccounts[account]
     if (!pwd || pwd !== password) fail('用户名或密码错误', 401)
     if (account === 'pending1' || account === 'pending1@sdo.local') fail('账号待审核，请联系管理员', 403)
+    const dynamic = mockDynamicUsers.find((u) => u.username === account || u.email === account)
+    if (dynamic) return ok({ token: `mock-token-${dynamic.user_id}`, user: { ...dynamic } }, '登录成功')
     const userKey = account.includes('admin') ? 'admin' : 'member1'
     const user = { ...mockUsers[userKey] }
     return ok({ token: `mock-token-${userKey}`, user }, '登录成功')
   }
 
+  if (method === 'post' && url === '/auth/password-reset-request') {
+    const { account, new_password, confirm_password } = body
+    if (new_password !== confirm_password) fail('两次密码不一致')
+    const user =
+      Object.values(mockUsers).find((u) => u.username === account || u.email === account) ||
+      mockDynamicUsers.find((u) => u.username === account || u.email === account)
+    if (!user) fail('账号不存在')
+    if (user.status !== 'active') fail('账号状态异常，请联系管理员')
+    if (mockPasswordResetRequests.some((r) => r.user_id === user.user_id && r.status === 'pending')) {
+      fail('您已有待审核的密码找回申请，请耐心等待')
+    }
+    mockPasswordResetRequests.push({
+      request_id: allocResetRequestId(),
+      user_id: user.user_id,
+      username: user.username,
+      real_name: user.real_name,
+      email: user.email,
+      phone: user.phone,
+      student_no: user.student_no,
+      status: 'pending',
+      new_password,
+      created_at: new Date().toISOString()
+    })
+    return ok(null, '密码找回申请已提交，请等待管理员审核')
+  }
+
   if (method === 'post' && url === '/auth/register') {
-    if (body.code && body.code !== '888888') fail('验证码无效')
-    return ok(null, '注册成功，请等待管理员审核')
-  }
-
-  if (method === 'post' && url === '/auth/email-code') {
-    return ok({ code: '888888' }, '验证码已发送（测试码：888888）')
-  }
-
-  if (method === 'post' && url === '/auth/reset-password/verify') {
-    if (body.code !== '888888') fail('验证码无效')
-    return ok({ verified: true }, '验证成功')
-  }
-
-  if (method === 'post' && url === '/auth/reset-password/request') {
-    return ok({ code: '888888', message: '实验环境：验证码 888888' }, '验证码已生成')
-  }
-
-  if (method === 'post' && url === '/auth/reset-password/confirm') {
-    return ok(null, '密码重置成功')
+    fail('自助注册已关闭，请联系管理员创建账号')
   }
 
   // 用户
@@ -145,9 +159,81 @@ export async function handleMock(config) {
   }
 
   if (method === 'get' && url === '/users/admin/users') {
-    let list = [...mockPendingUsers, mockUsers.member1, mockUsers.admin]
+    let list = [...mockDynamicUsers, mockUsers.member1].filter((u) => u.role === 'member' && u.status === 'active')
+    if (params.role) list = list.filter((u) => u.role === params.role)
     if (params.status) list = list.filter((u) => u.status === params.status)
     return ok(list)
+  }
+
+  if (method === 'post' && url === '/users/admin/users') {
+    const { username, email, password, real_name, phone, student_no } = body
+    if (mockAccounts[username] || mockDynamicUsers.some((u) => u.username === username)) {
+      fail('用户名或邮箱已存在')
+    }
+    const user = {
+      user_id: allocUserId(),
+      username,
+      email,
+      role: 'member',
+      status: 'active',
+      real_name,
+      phone,
+      student_no: student_no || null,
+      created_at: new Date().toISOString()
+    }
+    mockDynamicUsers.push(user)
+    mockAccounts[username] = password
+    mockAccounts[email] = password
+    return ok(user, '账号创建成功')
+  }
+
+  if (method === 'put' && url.match(/^\/users\/admin\/users\/\d+$/)) {
+    const id = parseInt(url.split('/')[4], 10)
+    const user = mockDynamicUsers.find((u) => u.user_id === id)
+    if (!user) fail('用户不存在', 404)
+    Object.assign(user, {
+      real_name: body.real_name ?? user.real_name,
+      phone: body.phone ?? user.phone,
+      email: body.email ?? user.email,
+      student_no: body.student_no ?? user.student_no
+    })
+    return ok(user, '更新成功')
+  }
+
+  if (method === 'delete' && url.match(/^\/users\/admin\/users\/\d+$/)) {
+    const id = parseInt(url.split('/')[4], 10)
+    const idx = mockDynamicUsers.findIndex((u) => u.user_id === id)
+    if (idx < 0) fail('用户不存在', 404)
+    const u = mockDynamicUsers[idx]
+    delete mockAccounts[u.username]
+    delete mockAccounts[u.email]
+    mockDynamicUsers.splice(idx, 1)
+    return ok(null, '账号已删除')
+  }
+
+  if (method === 'get' && url === '/users/admin/password-reset-requests') {
+    const status = params.status || 'pending'
+    const list = mockPasswordResetRequests.filter((r) => r.status === status)
+    return ok(list)
+  }
+
+  if (method === 'put' && url.match(/^\/users\/admin\/password-reset-requests\/\d+$/)) {
+    const requestId = parseInt(url.split('/')[4], 10)
+    const reqItem = mockPasswordResetRequests.find((r) => r.request_id === requestId)
+    if (!reqItem || reqItem.status !== 'pending') fail('申请不存在或已处理', 404)
+    const action = body.action === 'reject' ? 'reject' : 'approve'
+    reqItem.status = action === 'approve' ? 'approved' : 'rejected'
+    reqItem.reviewed_at = new Date().toISOString()
+    if (action === 'approve' && reqItem.new_password) {
+      const user =
+        Object.values(mockUsers).find((u) => u.user_id === reqItem.user_id) ||
+        mockDynamicUsers.find((u) => u.user_id === reqItem.user_id)
+      if (user) {
+        mockAccounts[user.username] = reqItem.new_password
+        mockAccounts[user.email] = reqItem.new_password
+      }
+    }
+    return ok(null, action === 'approve' ? '已通过，员工可使用新密码登录' : '已拒绝该申请')
   }
 
   if (method === 'put' && url.match(/^\/users\/admin\/users\/\d+\/approve$/)) {
@@ -158,6 +244,31 @@ export async function handleMock(config) {
   }
 
   // 仪表盘
+  if (method === 'get' && url === '/dashboard/clock-in/today') {
+    const records = Object.values(mockUsers)
+      .filter((u) => u.status === 'active')
+      .map((u) => ({
+        user_id: u.user_id,
+        username: u.username,
+        real_name: u.real_name,
+        student_no: u.student_no,
+        role: u.role,
+        clocked_in: isClockedIn(u.user_id),
+        clock_in_time: getClockInTime(u.user_id),
+      }))
+      .sort((a, b) => Number(b.clocked_in) - Number(a.clocked_in))
+    const clockedCount = records.filter((r) => r.clocked_in).length
+    const d = new Date()
+    const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return ok({
+      date,
+      total: records.length,
+      clocked_count: clockedCount,
+      absent_count: records.length - clockedCount,
+      records,
+    })
+  }
+
   if (method === 'get' && url === '/dashboard/clock-in') {
     const userId = getCurrentMockUserId()
     return ok({ clockedIn: isClockedIn(userId), clockInTime: getClockInTime(userId) })

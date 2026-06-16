@@ -1,4 +1,6 @@
 -- 演示数据（需先执行 schema.sql）
+-- 注意：Windows 下请勿直接用 sqlcmd 执行本文件，中文会乱码且 bcrypt 的 $ 会被误解析。
+-- 请使用：cd backend && npm run seed  或  npm run reset-db
 USE SDO_OA;
 GO
 

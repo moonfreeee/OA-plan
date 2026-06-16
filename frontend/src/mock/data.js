@@ -48,6 +48,23 @@ export const mockPendingUsers = [
   }
 ]
 
+/** 管理员录入的动态账号（Mock） */
+export const mockDynamicUsers = []
+
+/** 密码找回申请（Mock） */
+export const mockPasswordResetRequests = []
+
+let nextUserId = 20
+let nextResetRequestId = 1
+
+export function allocUserId() {
+  return nextUserId++
+}
+
+export function allocResetRequestId() {
+  return nextResetRequestId++
+}
+
 export const mockAnnouncements = [
   {
     announcement_id: 1,
