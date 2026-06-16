@@ -1,0 +1,374 @@
+.auth-shell {
+  min-height: 100vh;
+  background: url('/background.png') center / cover no-repeat fixed;
+  position: relative;
+  font-family: 'Source Han Sans SC', 'Noto Sans SC', '思源黑体', 'Microsoft YaHei', sans-serif;
+}
+
+.auth-shell__header {
+  position: absolute;
+  top: 32px;
+  left: 48px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 2;
+}
+
+.auth-shell__logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #fff;
+}
+
+.auth-shell__brand-title {
+  font-family: 'Kingsoft Cloud Font', 'Alimama ShuHeiTi', 'Microsoft YaHei', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1.2;
+}
+
+.auth-shell__brand-sub {
+  font-size: 14px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.auth-shell__main {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 24px 40px;
+}
+
+.auth-card {
+  display: flex;
+  width: min(920px, 100%);
+  min-height: 520px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.auth-card--single {
+  width: min(480px, 100%);
+  min-height: auto;
+  flex-direction: column;
+  padding: 40px 48px 48px;
+}
+
+.auth-card__nav {
+  width: 200px;
+  flex-shrink: 0;
+  background: #f7f8fa;
+  padding: 48px 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.auth-card__nav-slider {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  height: 72px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(34, 103, 242, 0.08);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
+}
+
+.auth-card__nav-slider.is-register {
+  transform: translateY(88px);
+}
+
+.auth-card__nav-item {
+  position: relative;
+  z-index: 1;
+  padding: 20px 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #666;
+  transition: color 0.25s;
+  user-select: none;
+}
+
+.auth-card__nav-item.is-active {
+  color: #2267f2;
+}
+
+.auth-card__nav-item-title {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.auth-card__nav-item-sub {
+  font-size: 12px;
+  color: #b8b8b8;
+  margin-top: 4px;
+}
+
+.auth-card__nav-icon {
+  font-size: 18px;
+  opacity: 0.6;
+}
+
+.auth-card__body {
+  flex: 1;
+  padding: 48px 56px;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-panel-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.auth-panel {
+  width: 100%;
+  transition: opacity 0.3s, transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.auth-panel.is-hidden {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(24px);
+}
+
+.auth-panel.is-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.auth-title {
+  font-family: 'Kingsoft Cloud Font', 'Alimama ShuHeiTi', 'Microsoft YaHei', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  text-align: center;
+  color: #1a1a1a;
+  margin-bottom: 8px;
+  letter-spacing: 0.2em;
+}
+
+.auth-subtitle {
+  text-align: center;
+  font-size: 14px;
+  color: #b8b8b8;
+  margin-bottom: 32px;
+}
+
+.auth-field {
+  margin-bottom: 16px;
+}
+
+.auth-field--password {
+  position: relative;
+}
+
+.auth-field--password .auth-input {
+  padding-right: 44px;
+}
+
+.auth-eye {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 16px;
+  opacity: 0.5;
+  padding: 4px;
+}
+
+.auth-eye:hover {
+  opacity: 0.8;
+}
+
+.auth-input {
+  width: 100%;
+  height: 48px;
+  border: none;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  padding: 0 16px;
+  font-size: 14px;
+  color: #333;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.auth-input::placeholder {
+  color: #b8b8b8;
+}
+
+.auth-input:focus {
+  box-shadow: 0 0 0 2px rgba(34, 103, 242, 0.2);
+}
+
+.auth-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.auth-input-row .auth-input {
+  flex: 1;
+}
+
+.auth-email-suffix {
+  width: 130px;
+  height: 48px;
+  border: none;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  padding: 0 8px;
+  font-size: 14px;
+  color: #333;
+  outline: none;
+  cursor: pointer;
+}
+
+.auth-code-btn {
+  min-width: 110px;
+  height: 48px;
+  border: none;
+  border-radius: 8px;
+  background: #f0f0f0;
+  color: #b8b8b8;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.auth-code-btn:not(:disabled) {
+  background: #eef3fe;
+  color: #2267f2;
+}
+
+.auth-code-btn:disabled {
+  cursor: not-allowed;
+}
+
+.auth-label {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.auth-btn-primary {
+  width: 100%;
+  height: 48px;
+  border: none;
+  border-radius: 8px;
+  background: #2267f2;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 8px;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+
+.auth-btn-primary:hover {
+  background: #1a56d4;
+}
+
+.auth-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 0 16px;
+  font-size: 13px;
+}
+
+.auth-link {
+  color: #2267f2;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+.auth-muted {
+  color: #b8b8b8;
+  font-size: 13px;
+}
+
+.auth-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #666;
+  cursor: pointer;
+}
+
+.auth-checkbox input {
+  accent-color: #2267f2;
+}
+
+.auth-back {
+  display: block;
+  text-align: center;
+  margin-top: 20px;
+  color: #666;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.auth-back:hover {
+  color: #2267f2;
+}
+
+.auth-success {
+  text-align: center;
+  padding: 48px 0;
+}
+
+.auth-success__icon {
+  font-size: 48px;
+  color: #67c23a;
+  margin-bottom: 16px;
+}
+
+.auth-success__text {
+  font-size: 20px;
+  color: #333;
+  font-family: 'Kingsoft Cloud Font', 'Alimama ShuHeiTi', 'Microsoft YaHei', sans-serif;
+}
+
+.auth-mock-tip {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background: #fffbe6;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #8c6d1f;
+  line-height: 1.6;
+}

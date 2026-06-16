@@ -1,0 +1,104 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #f0f2f5;
+  color: #303133;
+}
+
+.page-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.page-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #409eff 0%, #337ecc 100%);
+  color: #fff;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.stat-card.green { background: linear-gradient(135deg, #67c23a, #529b2e); }
+.stat-card.orange { background: linear-gradient(135deg, #e6a23c, #cf9236); }
+.stat-card.purple { background: linear-gradient(135deg, #909399, #73767a); }
+
+.stat-card .label { font-size: 14px; opacity: 0.9; }
+.stat-card .value { font-size: 28px; font-weight: 700; margin-top: 8px; }
+
+.task-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.task-column {
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 12px;
+  min-height: 300px;
+}
+
+.task-column h4 {
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.task-item {
+  background: #fff;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-left: 3px solid #409eff;
+}
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.auth-card {
+  width: 420px;
+  padding: 32px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.auth-card h2 {
+  text-align: center;
+  margin-bottom: 24px;
+  color: #303133;
+}
+
+.markdown-body {
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
