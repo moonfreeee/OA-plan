@@ -135,6 +135,7 @@ CREATE TABLE Courses (
     category NVARCHAR(50) NOT NULL,
     description NVARCHAR(MAX) NULL,
     cover_url NVARCHAR(500) NULL,
+    video_url NVARCHAR(500) NULL,
     difficulty NVARCHAR(20) NOT NULL DEFAULT 'beginner' CHECK (difficulty IN ('beginner', 'intermediate', 'advanced')),
     status NVARCHAR(20) NOT NULL DEFAULT 'published' CHECK (status IN ('draft', 'published', 'archived')),
     created_at DATETIME2 NOT NULL DEFAULT GETDATE(),

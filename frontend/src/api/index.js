@@ -42,6 +42,14 @@ export const saveScore = (data) => request.post('/assessments/scores', data)
 export const publishScore = (id) => request.put(`/assessments/scores/${id}/publish`)
 
 export const getCourses = () => request.get('/courses')
+export const getDemoVideos = () => request.get('/courses/videos/demo')
+export const uploadCourseVideo = (file) => {
+  const form = new FormData()
+  form.append('video', file)
+  return request.post('/courses/upload-video', form, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
 export const getCourse = (id) => request.get(`/courses/${id}`)
 export const createCourse = (data) => request.post('/courses', data)
 export const updateCourse = (id, data) => request.put(`/courses/${id}`, data)

@@ -550,6 +550,38 @@ export async function handleMock(config) {
   }
 
   // 课程
+  if (method === 'get' && url === '/courses/videos/demo') {
+    return ok([
+      {
+        id: 'demo-mongodb-install',
+        title: '9.2-1 MongoDB 安装与测试',
+        filename: '9.2-1 MongoDBinstall_test.mp4',
+        storageKey: 'demo-mongodb-install',
+        url: '/uploads/videos/demo-mongodb-install.mp4',
+        format: 'mp4',
+        available: true,
+        playable: true,
+        preparing: false
+      },
+      {
+        id: 'demo-query-data',
+        title: '9.4-2 QueryData',
+        filename: '9.4-2 QueryData.mp4',
+        storageKey: 'demo-query-data',
+        url: '/uploads/videos/demo-query-data.mp4',
+        format: 'mp4',
+        available: true,
+        playable: true,
+        preparing: false
+      }
+    ])
+  }
+
+  if (method === 'post' && url === '/courses/upload-video') {
+    const name = body?.video?.name || 'demo.wmv'
+    return ok({ url: `/uploads/videos/${name}`, filename: name, originalname: name }, '视频上传成功')
+  }
+
   if (method === 'get' && url === '/courses') {
     return ok(mockCourses.map(({ chapters, ...c }) => c))
   }

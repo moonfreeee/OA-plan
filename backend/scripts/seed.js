@@ -76,10 +76,10 @@ async function seedDatabase({ force = false } = {}) {
   `);
 
   await pool.request().query(`
-    INSERT INTO Courses (title, category, description, difficulty, status) VALUES
-    (N'Vue3 前端开发入门', N'前端', N'Vue3 组合式 API、Vue Router、Pinia 基础', 'beginner', 'published'),
-    (N'Node.js 后端开发', N'后端', N'Express REST API 与 SQL Server 集成', 'intermediate', 'published'),
-    (N'软件工程实践', N'软工', N'需求分析、UML 建模与测试方法', 'beginner', 'published');
+    INSERT INTO Courses (title, category, description, difficulty, status, video_url) VALUES
+    (N'Vue3 前端开发入门', N'前端', N'Vue3 组合式 API、Vue Router、Pinia 基础', 'beginner', 'published', NULL),
+    (N'Node.js 后端开发', N'后端', N'Express REST API 与 SQL Server 集成', 'intermediate', 'published', N'/uploads/videos/demo-mongodb-install.mp4'),
+    (N'软件工程实践', N'软工', N'需求分析、UML 建模与测试方法', 'beginner', 'published', NULL);
   `);
 
   await pool.request().query(`

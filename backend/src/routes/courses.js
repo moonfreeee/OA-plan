@@ -3,14 +3,54 @@ const { body, validationResult } = require('express-validator');
 const { query } = require('../config/db');
 const { success, fail } = require('../utils/response');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { getDemoVideos, isMp4Url } = require('../utils/videoPrepare');
+const { videoUpload } = require('../config/upload');
 
 const router = express.Router();
+
+function sanitizeVideoUrl(url) {
+  return isMp4Url(url) ? url : null;
+}
+
+function sanitizeCourse(row) {
+  if (!row) return row;
+  return { ...row, video_url: sanitizeVideoUrl(row.video_url) };
+}
+
+router.get('/videos/demo', requireAuth, async (req, res, next) => {
+  try {
+    return success(res, getDemoVideos());
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post(
+  '/upload-video',
+  requireAuth,
+  requireRole('admin'),
+  (req, res, next) => {
+    videoUpload.single('video')(req, res, (err) => {
+      if (err) return fail(res, err.message || '视频上传失败');
+      next();
+    });
+  },
+  async (req, res, next) => {
+    try {
+      if (!req.file) return fail(res, '请选择 MP4 视频文件');
+      const url = `/uploads/videos/${req.file.filename}`;
+      return success(res, { url, filename: req.file.filename, originalname: req.file.originalname }, '视频上传成功');
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 router.get('/', requireAuth, async (req, res, next) => {
   try {
     const userId = req.user.userId;
     const isAdmin = req.user.role === 'admin';
-    let sqlText = `SELECT c.course_id, c.title, c.category, c.description, c.cover_url, c.difficulty, c.status, c.created_at,
+    let sqlText = `SELECT c.course_id, c.title, c.category, c.description, c.cover_url, c.video_url, c.difficulty, c.status, c.created_at,
       (SELECT COUNT(*) FROM CourseChapters ch WHERE ch.course_id = c.course_id) AS chapter_count,
       (SELECT COUNT(DISTINCT lp.user_id) FROM CourseChapters ch2
        JOIN LearningProgress lp ON lp.chapter_id = ch2.chapter_id WHERE ch2.course_id = c.course_id) AS learner_count`;
@@ -22,7 +62,7 @@ router.get('/', requireAuth, async (req, res, next) => {
     }
     sqlText += ` FROM Courses c WHERE c.status = 'published' OR @isAdmin = 1 ORDER BY c.created_at DESC`;
     const result = await query(sqlText, { userId, isAdmin: isAdmin ? 1 : 0 });
-    return success(res, result.recordset);
+    return success(res, result.recordset.map(sanitizeCourse));
   } catch (err) {
     next(err);
   }
@@ -43,11 +83,11 @@ router.get('/:id', requireAuth, async (req, res, next) => {
     );
     const total = chapters.recordset.length;
     const done = chapters.recordset.filter((c) => c.completed).length;
-    return success(res, {
+    return success(res, sanitizeCourse({
       ...course.recordset[0],
       chapters: chapters.recordset,
       progress_pct: total ? Math.round((done / total) * 100) : 0,
-    });
+    }));
   } catch (err) {
     next(err);
   }
@@ -62,15 +102,17 @@ router.post(
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) return fail(res, errors.array()[0].msg);
-      const { title, category, description, cover_url, difficulty, status } = req.body;
+      const { title, category, description, cover_url, video_url, difficulty, status } = req.body;
+      if (video_url && !isMp4Url(video_url)) return fail(res, '课程视频仅支持 MP4 格式');
       const result = await query(
-        `INSERT INTO Courses (title, category, description, cover_url, difficulty, status) OUTPUT INSERTED.*
-         VALUES (@title, @category, @description, @cover_url, @difficulty, @status)`,
+        `INSERT INTO Courses (title, category, description, cover_url, video_url, difficulty, status) OUTPUT INSERTED.*
+         VALUES (@title, @category, @description, @cover_url, @video_url, @difficulty, @status)`,
         {
           title,
           category,
           description: description || null,
           cover_url: cover_url || null,
+          video_url: video_url || null,
           difficulty: difficulty || 'beginner',
           status: status || 'draft',
         }
@@ -85,13 +127,15 @@ router.post(
 router.put('/:id', requireAuth, requireRole('admin'), async (req, res, next) => {
   try {
     const courseId = parseInt(req.params.id, 10);
-    const { title, category, description, cover_url, difficulty, status } = req.body;
+    const { title, category, description, cover_url, video_url, difficulty, status } = req.body;
+    if (video_url && !isMp4Url(video_url)) return fail(res, '课程视频仅支持 MP4 格式');
     await query(
       `UPDATE Courses SET title = COALESCE(@title, title), category = COALESCE(@category, category),
        description = COALESCE(@description, description), cover_url = COALESCE(@cover_url, cover_url),
+       video_url = @video_url,
        difficulty = COALESCE(@difficulty, difficulty), status = COALESCE(@status, status),
        updated_at = GETDATE() WHERE course_id = @courseId`,
-      { courseId, title, category, description, cover_url, difficulty, status }
+      { courseId, title, category, description, cover_url, video_url: video_url ?? null, difficulty, status }
     );
     return success(res, null, '更新成功');
   } catch (err) {

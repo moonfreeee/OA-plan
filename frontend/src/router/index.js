@@ -18,6 +18,7 @@ const routes = [
       { path: 'teams/overview', name: 'TeamOverview', component: () => import('@/views/TeamOverviewView.vue'), meta: { title: '项目团队总览' } },
       { path: 'teams/:id', name: 'TeamDetail', component: () => import('@/views/TeamDetailView.vue'), meta: { title: '团队详情' } },
       { path: 'courses', name: 'Courses', component: () => import('@/views/CoursesView.vue'), meta: { title: '课程学习' } },
+      { path: 'courses/videos', name: 'CourseVideos', component: () => import('@/views/CourseVideoView.vue'), meta: { title: '课程视频' } },
       { path: 'courses/:id', name: 'CourseDetail', component: () => import('@/views/CourseDetailView.vue'), meta: { title: '课程详情' } },
       { path: 'admin/accounts', name: 'AdminAccounts', component: () => import('@/views/admin/AccountsView.vue'), meta: { title: '账号管理', roles: ['admin'] } },
       { path: 'admin/password-resets', name: 'AdminPasswordResets', component: () => import('@/views/admin/PasswordResetsView.vue'), meta: { title: '密码找回审核', roles: ['admin'] } },
